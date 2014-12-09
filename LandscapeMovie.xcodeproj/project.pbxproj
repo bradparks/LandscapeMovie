@@ -13,6 +13,7 @@
 		3C93339B1A3794A2002EDD6F /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 3C9333991A3794A2002EDD6F /* Main.storyboard */; };
 		3C93339D1A3794A2002EDD6F /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 3C93339C1A3794A2002EDD6F /* Images.xcassets */; };
 		3C9333A01A3794A2002EDD6F /* LaunchScreen.xib in Resources */ = {isa = PBXBuildFile; fileRef = 3C93339E1A3794A2002EDD6F /* LaunchScreen.xib */; };
+		3C9333B91A37B5EB002EDD6F /* libz.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 3C9333B81A37B5EB002EDD6F /* libz.dylib */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -26,6 +27,7 @@
 		3C93339A1A3794A2002EDD6F /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
 		3C93339C1A3794A2002EDD6F /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Images.xcassets; sourceTree = "<group>"; };
 		3C93339F1A3794A2002EDD6F /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/LaunchScreen.xib; sourceTree = "<group>"; };
+		3C9333B81A37B5EB002EDD6F /* libz.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libz.dylib; path = usr/lib/libz.dylib; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -33,6 +35,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				3C9333B91A37B5EB002EDD6F /* libz.dylib in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -42,6 +45,7 @@
 		3C9333831A3794A2002EDD6F = {
 			isa = PBXGroup;
 			children = (
+				3C9333B81A37B5EB002EDD6F /* libz.dylib */,
 				3C93338E1A3794A2002EDD6F /* LandscapeMovie */,
 				3C93338D1A3794A2002EDD6F /* Products */,
 			);
@@ -296,6 +300,7 @@
 				3C9333B11A3794A2002EDD6F /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};

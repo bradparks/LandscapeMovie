@@ -10,6 +10,8 @@
 
 #import <MediaPlayer/MediaPlayer.h>
 
+#include <zlib.h>
+
 @interface ViewController ()
 
 @end
@@ -230,7 +232,66 @@
 
 - (void) joinAllChunks:(NSArray*)chunkFilenameArr entryName:(NSString*)entryName
 {
-    NSLog(@"joinAllChunks: all files downloaded");
+  NSLog(@"joinAllChunks: all files downloaded");
+ 
+  // Stream N files of data from the chunk files to uncompressed .mp4
+  
+  NSString *filenameWithoutGZ = [entryName stringByReplacingOccurrencesOfString:@".gz" withString:@""];
+  
+  NSString *tmpOutputPath = [NSTemporaryDirectory() stringByAppendingPathComponent:filenameWithoutGZ];
+  
+  FILE *outMp4File = fopen((char*)[tmpOutputPath UTF8String], "w");
+  NSAssert(outMp4File, @"cannot open output path for writing");
+  
+  gzFile * inGZFile;
+  const int LENGTH = 0x1000 /* * 16 */;
+  
+  for (NSString *inGZPathStr in chunkFilenameArr) {
+    NSString *tmpInputPath = [NSTemporaryDirectory() stringByAppendingPathComponent:inGZPathStr];
+    
+    inGZFile = gzopen ((char*)[tmpInputPath UTF8String], "r");
+    NSAssert(inGZFile, @"cannot open input path for reading");
+    
+    unsigned char buffer[LENGTH];
+    int bytes_read;
+    int bytes_written;
+    int err;
+    
+    while (1) {
+      bytes_read = gzread (inGZFile, buffer, LENGTH);
+      
+      if (bytes_read > 0) {
+        bytes_written = fwrite(buffer, 1, bytes_read, outMp4File);
+        if (bytes_written != bytes_read) {
+          NSAssert(bytes_written == bytes_read, @"bytes_written != bytes_read : %d != %d", bytes_written, bytes_read);
+        }
+      }
+      
+      if (bytes_read < LENGTH) {
+        if (gzeof(inGZFile)) {
+          break;
+        } else {
+          gzerror(inGZFile, & err);
+          if (err) {
+            NSAssert(inGZFile, @"cannot read full buffer via gzread");
+          }
+        }
+      }
+    }
+    
+    gzclose(inGZFile);
+  }
+
+  fclose(outMp4File);
+  
+  NSLog(@"wrote %@", tmpOutputPath);
+  
+  for (NSString *inGZPathStr in chunkFilenameArr) {
+    NSLog(@"rm %@", inGZPathStr);
+    unlink((char*)[inGZPathStr UTF8String]);
+  }
+  
+  [self playMovie:tmpOutputPath];
 }
 
 @end
