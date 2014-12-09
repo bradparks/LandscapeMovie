@@ -16,12 +16,38 @@
 
 - (void)viewDidLoad {
   [super viewDidLoad];
-  // Do any additional setup after loading the view, typically from a nib.
+  
+  NSAssert(self.launchButton, @"launchButton");
+  
+  //UIWindow *window = self.view.window;
+  
+  UIWindow *window = [UIApplication sharedApplication].windows.firstObject;
+  
+  CGRect frame = window.frame;
+  
+  self.view.frame = frame;
+  
+  NSLog(@"resize view frame to %d x %d", (int)self.view.frame.size.width, (int)self.view.frame.size.height);
 }
 
-- (void)didReceiveMemoryWarning {
-  [super didReceiveMemoryWarning];
-  // Dispose of any resources that can be recreated.
+- (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)orientation
+{
+  if (orientation == UIInterfaceOrientationLandscapeLeft || orientation == UIInterfaceOrientationLandscapeRight) {
+    return YES;
+  } else {
+    return NO;
+  }
+}
+
+- (BOOL)shouldAutorotate {
+  
+  UIInterfaceOrientation orientation = [[UIApplication sharedApplication] statusBarOrientation];
+  
+  if (orientation == UIInterfaceOrientationLandscapeLeft || orientation == UIInterfaceOrientationLandscapeRight) {
+    return YES;
+  } else {
+    return NO;
+  }
 }
 
 @end

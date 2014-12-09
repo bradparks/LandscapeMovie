@@ -13,18 +13,7 @@
 		3C93339B1A3794A2002EDD6F /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 3C9333991A3794A2002EDD6F /* Main.storyboard */; };
 		3C93339D1A3794A2002EDD6F /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 3C93339C1A3794A2002EDD6F /* Images.xcassets */; };
 		3C9333A01A3794A2002EDD6F /* LaunchScreen.xib in Resources */ = {isa = PBXBuildFile; fileRef = 3C93339E1A3794A2002EDD6F /* LaunchScreen.xib */; };
-		3C9333AC1A3794A2002EDD6F /* LandscapeMovieTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 3C9333AB1A3794A2002EDD6F /* LandscapeMovieTests.m */; };
 /* End PBXBuildFile section */
-
-/* Begin PBXContainerItemProxy section */
-		3C9333A61A3794A2002EDD6F /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 3C9333841A3794A2002EDD6F /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 3C93338B1A3794A2002EDD6F;
-			remoteInfo = LandscapeMovie;
-		};
-/* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		3C93338C1A3794A2002EDD6F /* LandscapeMovie.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LandscapeMovie.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -37,20 +26,10 @@
 		3C93339A1A3794A2002EDD6F /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
 		3C93339C1A3794A2002EDD6F /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Images.xcassets; sourceTree = "<group>"; };
 		3C93339F1A3794A2002EDD6F /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/LaunchScreen.xib; sourceTree = "<group>"; };
-		3C9333A51A3794A2002EDD6F /* LandscapeMovieTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = LandscapeMovieTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		3C9333AA1A3794A2002EDD6F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		3C9333AB1A3794A2002EDD6F /* LandscapeMovieTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LandscapeMovieTests.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		3C9333891A3794A2002EDD6F /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		3C9333A21A3794A2002EDD6F /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -64,7 +43,6 @@
 			isa = PBXGroup;
 			children = (
 				3C93338E1A3794A2002EDD6F /* LandscapeMovie */,
-				3C9333A81A3794A2002EDD6F /* LandscapeMovieTests */,
 				3C93338D1A3794A2002EDD6F /* Products */,
 			);
 			sourceTree = "<group>";
@@ -73,7 +51,6 @@
 			isa = PBXGroup;
 			children = (
 				3C93338C1A3794A2002EDD6F /* LandscapeMovie.app */,
-				3C9333A51A3794A2002EDD6F /* LandscapeMovieTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -85,8 +62,8 @@
 				3C9333941A3794A2002EDD6F /* AppDelegate.m */,
 				3C9333961A3794A2002EDD6F /* ViewController.h */,
 				3C9333971A3794A2002EDD6F /* ViewController.m */,
-				3C9333991A3794A2002EDD6F /* Main.storyboard */,
 				3C93339C1A3794A2002EDD6F /* Images.xcassets */,
+				3C9333991A3794A2002EDD6F /* Main.storyboard */,
 				3C93339E1A3794A2002EDD6F /* LaunchScreen.xib */,
 				3C93338F1A3794A2002EDD6F /* Supporting Files */,
 			);
@@ -98,23 +75,6 @@
 			children = (
 				3C9333901A3794A2002EDD6F /* Info.plist */,
 				3C9333911A3794A2002EDD6F /* main.m */,
-			);
-			name = "Supporting Files";
-			sourceTree = "<group>";
-		};
-		3C9333A81A3794A2002EDD6F /* LandscapeMovieTests */ = {
-			isa = PBXGroup;
-			children = (
-				3C9333AB1A3794A2002EDD6F /* LandscapeMovieTests.m */,
-				3C9333A91A3794A2002EDD6F /* Supporting Files */,
-			);
-			path = LandscapeMovieTests;
-			sourceTree = "<group>";
-		};
-		3C9333A91A3794A2002EDD6F /* Supporting Files */ = {
-			isa = PBXGroup;
-			children = (
-				3C9333AA1A3794A2002EDD6F /* Info.plist */,
 			);
 			name = "Supporting Files";
 			sourceTree = "<group>";
@@ -139,24 +99,6 @@
 			productReference = 3C93338C1A3794A2002EDD6F /* LandscapeMovie.app */;
 			productType = "com.apple.product-type.application";
 		};
-		3C9333A41A3794A2002EDD6F /* LandscapeMovieTests */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 3C9333B21A3794A2002EDD6F /* Build configuration list for PBXNativeTarget "LandscapeMovieTests" */;
-			buildPhases = (
-				3C9333A11A3794A2002EDD6F /* Sources */,
-				3C9333A21A3794A2002EDD6F /* Frameworks */,
-				3C9333A31A3794A2002EDD6F /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				3C9333A71A3794A2002EDD6F /* PBXTargetDependency */,
-			);
-			name = LandscapeMovieTests;
-			productName = LandscapeMovieTests;
-			productReference = 3C9333A51A3794A2002EDD6F /* LandscapeMovieTests.xctest */;
-			productType = "com.apple.product-type.bundle.unit-test";
-		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -168,10 +110,6 @@
 				TargetAttributes = {
 					3C93338B1A3794A2002EDD6F = {
 						CreatedOnToolsVersion = 6.1;
-					};
-					3C9333A41A3794A2002EDD6F = {
-						CreatedOnToolsVersion = 6.1;
-						TestTargetID = 3C93338B1A3794A2002EDD6F;
 					};
 				};
 			};
@@ -189,7 +127,6 @@
 			projectRoot = "";
 			targets = (
 				3C93338B1A3794A2002EDD6F /* LandscapeMovie */,
-				3C9333A41A3794A2002EDD6F /* LandscapeMovieTests */,
 			);
 		};
 /* End PBXProject section */
@@ -202,13 +139,6 @@
 				3C93339B1A3794A2002EDD6F /* Main.storyboard in Resources */,
 				3C9333A01A3794A2002EDD6F /* LaunchScreen.xib in Resources */,
 				3C93339D1A3794A2002EDD6F /* Images.xcassets in Resources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		3C9333A31A3794A2002EDD6F /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -225,23 +155,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		3C9333A11A3794A2002EDD6F /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				3C9333AC1A3794A2002EDD6F /* LandscapeMovieTests.m in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXSourcesBuildPhase section */
-
-/* Begin PBXTargetDependency section */
-		3C9333A71A3794A2002EDD6F /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 3C93338B1A3794A2002EDD6F /* LandscapeMovie */;
-			targetProxy = 3C9333A61A3794A2002EDD6F /* PBXContainerItemProxy */;
-		};
-/* End PBXTargetDependency section */
 
 /* Begin PBXVariantGroup section */
 		3C9333991A3794A2002EDD6F /* Main.storyboard */ = {
@@ -297,7 +211,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 8.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 6.1;
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
@@ -333,7 +247,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 8.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 6.1;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -348,6 +262,7 @@
 				INFOPLIST_FILE = LandscapeMovie/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
 		};
@@ -358,40 +273,7 @@
 				INFOPLIST_FILE = LandscapeMovie/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				PRODUCT_NAME = "$(TARGET_NAME)";
-			};
-			name = Release;
-		};
-		3C9333B31A3794A2002EDD6F /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(SDKROOT)/Developer/Library/Frameworks",
-					"$(inherited)",
-				);
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"DEBUG=1",
-					"$(inherited)",
-				);
-				INFOPLIST_FILE = LandscapeMovieTests/Info.plist;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/LandscapeMovie.app/LandscapeMovie";
-			};
-			name = Debug;
-		};
-		3C9333B41A3794A2002EDD6F /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(SDKROOT)/Developer/Library/Frameworks",
-					"$(inherited)",
-				);
-				INFOPLIST_FILE = LandscapeMovieTests/Info.plist;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/LandscapeMovie.app/LandscapeMovie";
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
 		};
@@ -412,14 +294,6 @@
 			buildConfigurations = (
 				3C9333B01A3794A2002EDD6F /* Debug */,
 				3C9333B11A3794A2002EDD6F /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-		};
-		3C9333B21A3794A2002EDD6F /* Build configuration list for PBXNativeTarget "LandscapeMovieTests" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				3C9333B31A3794A2002EDD6F /* Debug */,
-				3C9333B41A3794A2002EDD6F /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 		};
