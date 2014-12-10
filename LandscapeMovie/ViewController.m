@@ -91,12 +91,15 @@
 
 - (void)startMovieDownload
 {
-  NSString *entryName   = @"Luna_480p.mp4.gz";
-  NSString *segmentsJsonURL   = [NSString stringWithFormat:@"http://sinuous-vortex-786.appspot.com/%@", entryName];
+  NSString *entryName   = @"Luna_480p.mp4";
+  NSString *servicePrefix   = @"http://localhost:8080";
+  //NSString *servicePrefix   = @"http://sinuous-vortex-786.appspot.com";
+  NSString *segmentsJsonURL   = [NSString stringWithFormat:@"%@/%@", servicePrefix, entryName];
   NSURL *url = [NSURL URLWithString:segmentsJsonURL];
   NSAssert(url, @"url");
   
   dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_LOW, 0), ^{
+    NSLog(@"downloading movie url: %@", url);
     NSData *jsonData = [NSData dataWithContentsOfURL:url];
     [self finishedChunksDownload:jsonData entryName:entryName];
   });
@@ -105,8 +108,14 @@
 - (void)finishedChunksDownload:(NSData*)jsonData entryName:(NSString*)entryName
 {
   // Parse Json and then download each segment listed in the download
- 
+
+  if (jsonData == nil) {
+    NSLog(@"JSON url download failed");
+    return;
+  }
+  
   NSError *localError = nil;
+  
   NSDictionary *parsedObject = [NSJSONSerialization JSONObjectWithData:jsonData options:0 error:&localError];
   
   if (localError != nil) {
@@ -236,15 +245,13 @@
  
   // Stream N files of data from the chunk files to uncompressed .mp4
   
-  NSString *filenameWithoutGZ = [entryName stringByReplacingOccurrencesOfString:@".gz" withString:@""];
-  
-  NSString *tmpOutputPath = [NSTemporaryDirectory() stringByAppendingPathComponent:filenameWithoutGZ];
+  NSString *tmpOutputPath = [NSTemporaryDirectory() stringByAppendingPathComponent:entryName];
   
   FILE *outMp4File = fopen((char*)[tmpOutputPath UTF8String], "w");
   NSAssert(outMp4File, @"cannot open output path for writing");
   
   gzFile * inGZFile;
-  const int LENGTH = 0x1000 /* * 16 */;
+  const int LENGTH = 0x1000 * 16; // 16 pages
   
   for (NSString *inGZPathStr in chunkFilenameArr) {
     NSString *tmpInputPath = [NSTemporaryDirectory() stringByAppendingPathComponent:inGZPathStr];
@@ -286,9 +293,14 @@
   
   NSLog(@"wrote %@", tmpOutputPath);
   
-  for (NSString *inGZPathStr in chunkFilenameArr) {
-    NSLog(@"rm %@", inGZPathStr);
-    unlink((char*)[inGZPathStr UTF8String]);
+  if (0) {
+    // Remove chunks after writing final output
+    
+    for (NSString *inGZPathStr in chunkFilenameArr) {
+      NSLog(@"rm %@", inGZPathStr);
+      unlink((char*)[inGZPathStr UTF8String]);
+    }
+    
   }
   
   [self playMovie:tmpOutputPath];
