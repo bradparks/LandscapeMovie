@@ -12,9 +12,15 @@
 
 #include <zlib.h>
 
+#include "AsyncURLDownloader.h"
+
 @interface ViewController ()
 
 @property (nonatomic, retain) MPMoviePlayerController *moviePlayerController;
+
+// Array of AsyncURLDownloader objects
+
+@property (nonatomic, retain) NSMutableArray *asyncDownloaders;
 
 @end
 
@@ -107,9 +113,9 @@
 
 - (void)startMovieDownload
 {
-  //NSString *entryName   = @"Luna_480p.mp4";
+  NSString *entryName   = @"Luna_480p.mp4";
   //NSString *entryName   = @"Luna_720p.mp4";
-  NSString *entryName   = @"Luna_1080p.mp4";
+  //NSString *entryName   = @"Luna_1080p.mp4";
   
   if ([self.class doesTmpFileExist:entryName]) {
     NSString *tmpDirPath = [NSTemporaryDirectory() stringByAppendingPathComponent:entryName];
@@ -171,13 +177,9 @@
   
   NSMutableArray *chunkFilenameArr = [NSMutableArray array];
   
-  // Create another threaded job that will wait until all downloads are completed
-  
-  dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_LOW, 0), ^{
-    [self waitForAndJoinChunks:chunkFilenameArr entryName:entryName];
-  });
-  
   // Kick off download for each chunk in a different GCD threads
+  
+  self.asyncDownloaders = [NSMutableArray array];
   
   for (NSString *urlStr in chunkArr) {
 
@@ -185,24 +187,78 @@
     [chunkFilenameArr addObject:chunkFilename];
     
     if ([self.class doesTmpFileExist:chunkFilename] == FALSE) {
+
+      NSString *urlAndProtocolStr = [NSString stringWithFormat:@"http://%@", urlStr];
+      NSURL *url = [NSURL URLWithString:urlAndProtocolStr];
       
-      NSAssert([NSThread currentThread] != [NSThread mainThread], @"cannot block the main thread with dispatch_sync");
+      AsyncURLDownloader *asyncURLDownloader = [AsyncURLDownloader asyncURLDownloaderWithURL:url];
       
-      dispatch_sync(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_LOW, 0), ^{
-        NSString *urlAndProtocolStr = [NSString stringWithFormat:@"http://%@", urlStr];
-        NSURL *url = [NSURL URLWithString:urlAndProtocolStr];
-        
-        NSLog(@"start download %@", url);
-        
-        // FIXME: cannot hold large download files in memory!
-        
-        NSData *gzipData = [NSData dataWithContentsOfURL:url];
-        [self finishedChunkDownload:gzipData segName:chunkFilename];
-      });
+      // Write to tmp/Chunk.gz.part and then rename to Chunk.gz when complete
+      
+      NSString *tmpDir = NSTemporaryDirectory();
+      
+      //NSString *tmpPath = [tmpDir stringByAppendingPathComponent:chunkFilename];
+      
+      NSString *tmpPartPath = [NSString stringWithFormat:@"%@.part", [tmpDir stringByAppendingPathComponent:chunkFilename]];
+      
+      asyncURLDownloader.resultFilename = tmpPartPath;
+      
+      NSLog(@"start async download %@", url);
+      
+      [self.asyncDownloaders addObject:asyncURLDownloader];
+      
+      // Register for notification when URL download is finished
+      
+      [[NSNotificationCenter defaultCenter] addObserver:self
+                                               selector:@selector(asyncURLDownloaderDidFinishNotification:)
+                                                   name:AsyncURLDownloadDidFinish
+                                                 object:asyncURLDownloader];
+      
+      [asyncURLDownloader startDownload];
       
     }
-    
   }
+  
+  // FIXME: this would be better done as a check on each downloader to see if completed
+  
+  // Create another threaded job that will wait until all downloads are completed
+  
+  dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_LOW, 0), ^{
+    [self waitForAndJoinChunks:chunkFilenameArr entryName:entryName];
+  });
+
+}
+
+// Invoked when ChunkN.gz file has been fully downloaded
+
+- (void) asyncURLDownloaderDidFinishNotification:(NSNotification*)notification
+{
+  AsyncURLDownloader *asyncURLDownloader = [notification object];
+  
+  NSAssert(asyncURLDownloader != nil, @"asyncURLDownloader is nil");
+  
+  [[NSNotificationCenter defaultCenter] removeObserver:self name:AsyncURLDownloadProgress object:asyncURLDownloader];
+  [[NSNotificationCenter defaultCenter] removeObserver:self name:AsyncURLDownloadDidFinish object:asyncURLDownloader];
+  
+  int httpStatusCode = asyncURLDownloader.httpStatusCode;
+  NSAssert(httpStatusCode > 0, @"httpStatusCode is invalid");
+  
+  if (httpStatusCode == 200) {
+    NSString *partFilename = asyncURLDownloader.resultFilename;
+    
+    NSAssert([partFilename hasSuffix:@".part"], @"invalid part filename");
+    
+    NSString *gzFilename = [partFilename stringByDeletingPathExtension];
+    
+    NSString *gzChunkFilename = [gzFilename lastPathComponent];
+    
+    NSData *mappedData = [NSData dataWithContentsOfMappedFile:asyncURLDownloader.resultFilename];
+    
+    [self finishedChunkDownload:mappedData segName:gzChunkFilename];
+  } else {
+    NSAssert(FALSE, @"non 200 HTTP STATUS code %d", httpStatusCode);
+  }
+  return;
 }
 
 - (void)finishedChunkDownload:(NSData*)gzipData segName:(NSString*)segName
@@ -218,6 +274,8 @@
   }
   
   NSString *tmpDirPath = [NSTemporaryDirectory() stringByAppendingPathComponent:segName];
+  
+  // FIXME: instead of doing a copy, simply rename the completely downloaded file.
   
   BOOL worked = [gzipData writeToFile:tmpDirPath atomically:TRUE];
   

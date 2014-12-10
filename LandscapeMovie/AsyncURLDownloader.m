@@ -104,6 +104,11 @@ NSString * const AsyncURLDownloaderConnectionDelegateProgress = @"AsyncURLDownlo
 
 - (void) startDownload
 {
+  if ([NSThread currentThread] != [NSThread mainThread]) {
+    [self performSelectorOnMainThread:@selector(startDownload) withObject:self waitUntilDone:NO];
+    return;
+  }
+  
   NSAssert(self.started == FALSE, @"already started");
 
   // Use connectionDelegate to ensure that there is no circular reference loop from the connection
