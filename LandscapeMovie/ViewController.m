@@ -250,36 +250,31 @@
     
     NSString *gzFilename = [partFilename stringByDeletingPathExtension];
     
-    NSString *gzChunkFilename = [gzFilename lastPathComponent];
-    
-    NSData *mappedData = [NSData dataWithContentsOfMappedFile:asyncURLDownloader.resultFilename];
-    
-    [self finishedChunkDownload:mappedData segName:gzChunkFilename];
+    [self finishedChunkDownload:gzFilename partFilepath:partFilename];
   } else {
     NSAssert(FALSE, @"non 200 HTTP STATUS code %d", httpStatusCode);
   }
   return;
 }
 
-- (void)finishedChunkDownload:(NSData*)gzipData segName:(NSString*)segName
+- (void)finishedChunkDownload:(NSString*)gzFilename partFilepath:(NSString*)partFilename
 {
-  NSLog(@"finishedChunkDownload %9d bytes for seg %@", (int)gzipData.length, segName);
-  
-  if (gzipData == nil) {
-    NSAssert(FALSE, @"download failed for %@", segName);
-  }
-
-  if (gzipData.length == 0) {
-    NSAssert(FALSE, @"download length must not be zero for %@", segName);
+  if (TRUE) {
+    NSData *mappedData = [NSData dataWithContentsOfMappedFile:partFilename];
+    NSLog(@"finishedChunkDownload %9d bytes for seg %@", (int)mappedData.length, [gzFilename lastPathComponent]);
   }
   
-  NSString *tmpDirPath = [NSTemporaryDirectory() stringByAppendingPathComponent:segName];
+  // Rename file to final result filename
   
-  // FIXME: instead of doing a copy, simply rename the completely downloaded file.
+  BOOL worked;
   
-  BOOL worked = [gzipData writeToFile:tmpDirPath atomically:TRUE];
+  if ([[NSFileManager defaultManager] fileExistsAtPath:gzFilename]) {
+    worked = [[NSFileManager defaultManager] removeItemAtPath:gzFilename error:nil];
+    NSAssert(worked, @"removeItemAtPath");
+  }
   
-  NSAssert(worked, @"write for %@ failed", segName);
+  worked = [[NSFileManager defaultManager] moveItemAtPath:partFilename toPath:gzFilename error:nil];
+  NSAssert(worked, @"rename from %@ to %@ failed", partFilename, gzFilename);
 }
 
 + (BOOL) doesTmpFileExist:(NSString*)chunkFilename
