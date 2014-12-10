@@ -92,6 +92,17 @@
 - (void)startMovieDownload
 {
   NSString *entryName   = @"Luna_480p.mp4";
+  
+  if ([self.class doesTmpFileExist:entryName]) {
+    NSString *tmpDirPath = [NSTemporaryDirectory() stringByAppendingPathComponent:entryName];
+    
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 1 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+      [self playMovie:tmpDirPath];
+    });
+    
+    return;
+  }
+  
   NSString *servicePrefix   = @"http://localhost:8080";
   //NSString *servicePrefix   = @"http://sinuous-vortex-786.appspot.com";
   NSString *segmentsJsonURL   = [NSString stringWithFormat:@"%@/%@", servicePrefix, entryName];
@@ -137,7 +148,7 @@
     NSString *chunkFilename = [urlStr lastPathComponent];
     [chunkFilenameArr addObject:chunkFilename];
     
-    if ([self.class doesChunkTmpFileExist:chunkFilename] == FALSE) {
+    if ([self.class doesTmpFileExist:chunkFilename] == FALSE) {
       
       dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_LOW, 0), ^{
         NSString *urlAndProtocolStr = [NSString stringWithFormat:@"http://%@", urlStr];
@@ -176,7 +187,7 @@
   NSAssert(worked, @"write for %@ failed", segName);
 }
 
-+ (BOOL) doesChunkTmpFileExist:(NSString*)chunkFilename
++ (BOOL) doesTmpFileExist:(NSString*)chunkFilename
 {
   NSString *tmpDirPath = [NSTemporaryDirectory() stringByAppendingPathComponent:chunkFilename];
   return [[NSFileManager defaultManager] fileExistsAtPath:tmpDirPath];
@@ -197,7 +208,7 @@
   float percentDoneNormalized = 0.0f;
   
   for (NSString *chunkFilename in chunkFilenameArr) {
-    if ([self.class doesChunkTmpFileExist:chunkFilename] == FALSE) {
+    if ([self.class doesTmpFileExist:chunkFilename] == FALSE) {
       allFileExist = FALSE;
     } else {
       percentDoneNormalized += (100.0f / chunkFilenameArr.count) / 100.0f;
