@@ -165,7 +165,13 @@
   
   NSMutableArray *chunkFilenameArr = [NSMutableArray array];
   
-  // Kick off download for each chunk in a different thread
+  // Create another threaded job that will wait until all downloads are completed
+  
+  dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_LOW, 0), ^{
+    [self waitForAndJoinChunks:chunkFilenameArr entryName:entryName];
+  });
+  
+  // Kick off download for each chunk in a different GCD threads
   
   for (NSString *urlStr in chunkArr) {
 
@@ -174,11 +180,13 @@
     
     if ([self.class doesTmpFileExist:chunkFilename] == FALSE) {
       
-      dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_LOW, 0), ^{
+      dispatch_sync(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_LOW, 0), ^{
         NSString *urlAndProtocolStr = [NSString stringWithFormat:@"http://%@", urlStr];
         NSURL *url = [NSURL URLWithString:urlAndProtocolStr];
         
         NSLog(@"start download %@", url);
+        
+        // FIXME: cannot hold large download files in memory!
         
         NSData *gzipData = [NSData dataWithContentsOfURL:url];
         [self finishedChunkDownload:gzipData segName:chunkFilename];
@@ -187,13 +195,6 @@
     }
     
   }
-  
-  // Create another threaded job that will wait until all downloads are completed
-  
-  dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_LOW, 0), ^{
-    [self waitForAndJoinChunks:chunkFilenameArr entryName:entryName];
-  });
-  
 }
 
 - (void)finishedChunkDownload:(NSData*)gzipData segName:(NSString*)segName
