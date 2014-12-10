@@ -65,6 +65,8 @@
   NSURL    *fileURL    =   [NSURL fileURLWithPath:localMoviePath];
   MPMoviePlayerController *moviePlayerController = [[MPMoviePlayerController alloc] initWithContentURL:fileURL];
   
+  NSAssert(moviePlayerController, @"moviePlayerController is nil");
+  
   self.moviePlayerController = moviePlayerController;
   
   [[NSNotificationCenter defaultCenter] addObserver:self
@@ -74,14 +76,18 @@
   
   CGRect frame = self.view.frame;
   
+  NSLog(@"set movie width x height to %d x %d", (int)frame.size.width, (int)frame.size.height);
+  
   [moviePlayerController.view setFrame:frame];
+  
+  [self.launchButton removeFromSuperview];
   
   [self.view addSubview:moviePlayerController.view];
   moviePlayerController.fullscreen = YES;
   
   moviePlayerController.scalingMode = MPMovieScalingModeFill;
   
-  [moviePlayerController prepareToPlay];
+  //[moviePlayerController prepareToPlay];
   
   [moviePlayerController play];
 }
@@ -108,7 +114,7 @@
   if ([self.class doesTmpFileExist:entryName]) {
     NSString *tmpDirPath = [NSTemporaryDirectory() stringByAppendingPathComponent:entryName];
     
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 1 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 2 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
       [self playMovie:tmpDirPath];
     });
     
@@ -180,6 +186,8 @@
     
     if ([self.class doesTmpFileExist:chunkFilename] == FALSE) {
       
+      NSAssert([NSThread currentThread] != [NSThread mainThread], @"cannot block the main thread with dispatch_sync");
+      
       dispatch_sync(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_LOW, 0), ^{
         NSString *urlAndProtocolStr = [NSString stringWithFormat:@"http://%@", urlStr];
         NSURL *url = [NSURL URLWithString:urlAndProtocolStr];
@@ -229,6 +237,9 @@
   if (debugWait) {
   NSLog(@"waitForAndJoinChunks %d files for entryName %@", (int)chunkFilenameArr.count, entryName);
   }
+  
+  NSAssert(chunkFilenameArr, @"chunkFilenameArr is nil");
+  NSAssert(chunkFilenameArr.count > 0, @"chunkFilenameArr.count is zero");
   
   // Defer unless all files exist at this point
   
