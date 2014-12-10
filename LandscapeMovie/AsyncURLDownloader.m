@@ -74,13 +74,19 @@ NSString * const AsyncURLDownloaderConnectionDelegateProgress = @"AsyncURLDownlo
   //self.downloading = FALSE;
   //self.downloaded = FALSE;
 
+#if __has_feature(objc_arc)
+#else
   [super dealloc];
+#endif // objc_arc
 }
 
 + (AsyncURLDownloader*) asyncURLDownloader
 {
   AsyncURLDownloader *obj = [[AsyncURLDownloader alloc] init];
-  [obj autorelease];
+#if __has_feature(objc_arc)
+#else
+  obj = [obj autorelease];
+#endif // objc_arc
   obj.timeoutInterval = 60; // system default timeout
   return obj;
 }
@@ -103,7 +109,10 @@ NSString * const AsyncURLDownloaderConnectionDelegateProgress = @"AsyncURLDownlo
   // Use connectionDelegate to ensure that there is no circular reference loop from the connection
   // back to this object.
  
+#if __has_feature(objc_arc)
+#else
   int retainCountIn = self.retainCount;
+#endif // objc_arc
   
   NSAssert(self.connectionDelegate == nil, @"already a connectionDelegate");
   AsyncURLDownloaderConnectionDelegate *delegate = [AsyncURLDownloaderConnectionDelegate asyncURLDownloaderConnectionDelegate];
@@ -166,16 +175,23 @@ NSString * const AsyncURLDownloaderConnectionDelegateProgress = @"AsyncURLDownlo
   // Kick off download
   
   NSURLConnection *connection = [[NSURLConnection alloc] initWithRequest:mrequestObj delegate:self.connectionDelegate startImmediately:TRUE];
-  [connection autorelease];
+
+#if __has_feature(objc_arc)
+#else
+  connection = [connection autorelease];
+#endif // objc_arc
   
   // Critical that we don't invoke [connection start] here, startImmediately:TRUE was passed above and invoking
   // start would lead to a very difficult to track down core dump!
   
   self.connection = connection;
   self.started = TRUE;
-    
+
+#if __has_feature(objc_arc)
+#else
   int retainCountOut = self.retainCount;
   NSAssert(retainCountIn == retainCountOut, @"retainCount incremented in startDownload");
+#endif // objc_arc
   
   return;
 }
@@ -207,7 +223,7 @@ NSString * const AsyncURLDownloaderConnectionDelegateProgress = @"AsyncURLDownlo
     // If download is complete, then data can be set to nil in the delegate
     numBytesDownloaded = 0;
   } else {
-    numBytesDownloaded = [delegate.data length];
+    numBytesDownloaded = (int) [delegate.data length];
   }
   BOOL isDownloading = (numBytesDownloaded > 0);
   if (isDownloading) {
@@ -288,7 +304,11 @@ NSString * const AsyncURLDownloaderConnectionDelegateProgress = @"AsyncURLDownlo
   // Note that an extra ref to self must be held while AsyncURLDownloadDidFinish executes, to deal with the case where the final ref
   // to this objet is being dropped in the notification callback.
   
+#if __has_feature(objc_arc)
+  // FIXME: need to hold on to self here with ARC ?
+#else
   [self retain];
+#endif // objc_arc
   
   [[NSNotificationCenter defaultCenter] postNotificationName:AsyncURLDownloadDidFinish object:self userInfo:userInfo];
   
@@ -297,7 +317,10 @@ NSString * const AsyncURLDownloaderConnectionDelegateProgress = @"AsyncURLDownlo
   self.connected = TRUE;
   self.downloaded = TRUE;
 
+#if __has_feature(objc_arc)
+#else
   [self release];
+#endif // objc_arc
   
   return;
 }
@@ -308,8 +331,12 @@ NSString * const AsyncURLDownloaderConnectionDelegateProgress = @"AsyncURLDownlo
 
 - (NSString*) resultDataAsString {
   NSString *obj = [[NSString alloc] initWithData:self.resultData encoding:NSUTF8StringEncoding];
-  [obj autorelease];
+  
+#if __has_feature(objc_arc)
   return obj;
+#else
+  return [obj autorelease];
+#endif // objc_arc
 }
 
 @end // Class AsyncURLDownloader
@@ -327,7 +354,11 @@ NSString * const AsyncURLDownloaderConnectionDelegateProgress = @"AsyncURLDownlo
 + (AsyncURLDownloaderConnectionDelegate*) asyncURLDownloaderConnectionDelegate
 {
   AsyncURLDownloaderConnectionDelegate *obj = [[AsyncURLDownloaderConnectionDelegate alloc] init];
-  [obj autorelease];
+#if __has_feature(objc_arc)
+#else
+  obj = [obj autorelease];
+#endif // objc_arc
+
   obj.data = [NSMutableData dataWithCapacity:4096];
   NSAssert(obj.data != nil, @"data can't be nil");
   obj->downloadedBytes = 0;
@@ -339,7 +370,11 @@ NSString * const AsyncURLDownloaderConnectionDelegateProgress = @"AsyncURLDownlo
   self.data = nil;
   self.responseHeaders = nil;
   self.resultFilename = nil;
+  
+#if __has_feature(objc_arc)
+#else
   [super dealloc];
+#endif // objc_arc
 }
 
 #pragma mark NSURLConnection Delegates
@@ -352,7 +387,7 @@ NSString * const AsyncURLDownloaderConnectionDelegateProgress = @"AsyncURLDownlo
   
   if ([response respondsToSelector:@selector(statusCode)]) {
     NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse *)response;
-    int statusCode = [httpResponse statusCode];
+    int statusCode = (int) [httpResponse statusCode];
     self->httpStatusCode = statusCode;
     NSLog(@"httpStatusCode was %d", statusCode);
 
@@ -373,7 +408,7 @@ NSString * const AsyncURLDownloaderConnectionDelegateProgress = @"AsyncURLDownlo
       NSString *contentLengthStr = [allHeaderFields objectForKey:@"Content-Length"];
       NSInteger contentLengthInt = [contentLengthStr intValue];
       if (contentLengthInt > 0) {
-        self->contentLength = contentLengthInt;
+        self->contentLength = (int) contentLengthInt;
       }
     }
   }  
@@ -437,7 +472,7 @@ NSString * const AsyncURLDownloaderConnectionDelegateProgress = @"AsyncURLDownlo
 
 - (void) doneLoadingData:(NSURLConnection*)connection error:(NSError*)error
 {
-  NSLog(@"doneLoadingData: %x %x : %d bytes", (int)connection, (int)error, [self.data length]);
+  NSLog(@"doneLoadingData: %x %x : %d bytes", (int)connection, (int)error, (int)[self.data length]);
   
   // Post notification that contains the HTTP status code, the data, and an error object if there was an error
 
@@ -458,7 +493,7 @@ NSString * const AsyncURLDownloaderConnectionDelegateProgress = @"AsyncURLDownlo
   if (error != nil) {
     NSLog(@"NSURLConnection Error - \"%@\" %d %@",
           [error localizedDescription],
-          error.code,
+          (int)error.code,
           [[error userInfo] objectForKey:NSURLErrorFailingURLStringErrorKey]);
     
     // HTTP 408 "Request Timeout"
@@ -510,7 +545,7 @@ NSString * const AsyncURLDownloaderConnectionDelegateProgress = @"AsyncURLDownlo
     if (!handledError)
     {
       NSString *msg = [NSString stringWithFormat:@"unhandled NSURLConnection error \"%@\" %d : \"%@\"",
-                       error.domain, error.code, [error localizedDescription]];
+                       error.domain, (int)error.code, [error localizedDescription]];
       NSAssert(FALSE, msg);
     }
     
@@ -567,7 +602,11 @@ NSString * const AsyncURLDownloaderConnectionDelegateProgress = @"AsyncURLDownlo
     if (TRUE) {
       //NSURLCredential *credential = [NSURLCredential credentialForTrust:challenge.protectionSpace.serverTrust];
       NSURLCredential *credential = [[NSURLCredential alloc] initWithTrust:challenge.protectionSpace.serverTrust];
-      [credential autorelease];
+      
+#if __has_feature(objc_arc)
+#else
+      credential = [credential autorelease];
+#endif // objc_arc
 
       [challenge.sender useCredential:credential forAuthenticationChallenge:challenge];
     }
