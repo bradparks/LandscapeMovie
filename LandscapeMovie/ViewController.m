@@ -14,6 +14,8 @@
 
 @interface ViewController ()
 
+@property (nonatomic, retain) MPMoviePlayerController *moviePlayerController;
+
 @end
 
 @implementation ViewController
@@ -63,17 +65,23 @@
   NSURL    *fileURL    =   [NSURL fileURLWithPath:localMoviePath];
   MPMoviePlayerController *moviePlayerController = [[MPMoviePlayerController alloc] initWithContentURL:fileURL];
   
+  self.moviePlayerController = moviePlayerController;
+  
   [[NSNotificationCenter defaultCenter] addObserver:self
                                            selector:@selector(moviePlaybackComplete:)
                                                name:MPMoviePlayerPlaybackDidFinishNotification
                                              object:moviePlayerController];
   
-  [moviePlayerController.view setFrame:self.view.frame];
+  CGRect frame = self.view.frame;
+  
+  [moviePlayerController.view setFrame:frame];
   
   [self.view addSubview:moviePlayerController.view];
   moviePlayerController.fullscreen = YES;
   
   moviePlayerController.scalingMode = MPMovieScalingModeFill;
+  
+  [moviePlayerController prepareToPlay];
   
   [moviePlayerController play];
 }
@@ -87,11 +95,15 @@
                                                 object:moviePlayerController];
   
   [moviePlayerController.view removeFromSuperview];
+  
+  self.moviePlayerController = nil;
 }
 
 - (void)startMovieDownload
 {
-  NSString *entryName   = @"Luna_480p.mp4";
+  //NSString *entryName   = @"Luna_480p.mp4";
+  //NSString *entryName   = @"Luna_720p.mp4";
+  NSString *entryName   = @"Luna_1080p.mp4";
   
   if ([self.class doesTmpFileExist:entryName]) {
     NSString *tmpDirPath = [NSTemporaryDirectory() stringByAppendingPathComponent:entryName];
@@ -103,8 +115,20 @@
     return;
   }
   
-  NSString *servicePrefix   = @"http://localhost:8080";
-  //NSString *servicePrefix   = @"http://sinuous-vortex-786.appspot.com";
+  const BOOL useDevDeploy = FALSE;
+
+  NSString *servicePrefix;
+  
+  if (useDevDeploy) {
+    // Deployed locally via:
+    // goapp serve
+    servicePrefix = @"http://localhost:8080";
+  } else {
+    // Deployed to GAE via:
+    // goapp deploy -oauth
+    servicePrefix = @"http://sinuous-vortex-786.appspot.com";
+  }
+  
   NSString *segmentsJsonURL   = [NSString stringWithFormat:@"%@/%@", servicePrefix, entryName];
   NSURL *url = [NSURL URLWithString:segmentsJsonURL];
   NSAssert(url, @"url");
@@ -176,8 +200,12 @@
 {
   NSLog(@"finishedChunkDownload %9d bytes for seg %@", (int)gzipData.length, segName);
   
-  if (gzipData.length == 0) {
+  if (gzipData == nil) {
     NSAssert(FALSE, @"download failed for %@", segName);
+  }
+
+  if (gzipData.length == 0) {
+    NSAssert(FALSE, @"download length must not be zero for %@", segName);
   }
   
   NSString *tmpDirPath = [NSTemporaryDirectory() stringByAppendingPathComponent:segName];
@@ -214,8 +242,14 @@
       percentDoneNormalized += (100.0f / chunkFilenameArr.count) / 100.0f;
     }
   }
+
+  int percentDoneInt = (int)round(percentDoneNormalized*100.0f);
   
-  NSString *percentDoneStr = [NSString stringWithFormat:@"%3d", (int)round(percentDoneNormalized*100.0f)];
+  if (percentDoneInt == 0) {
+    percentDoneInt = 1;
+  }
+  
+  NSString *percentDoneStr = [NSString stringWithFormat:@"%3d", percentDoneInt];
 
   if (debugWait || 1) {
     NSLog(@"percentDoneStr %@", percentDoneStr);
@@ -276,10 +310,10 @@
     int err;
     
     while (1) {
-      bytes_read = gzread (inGZFile, buffer, LENGTH);
+      bytes_read = gzread(inGZFile, buffer, LENGTH);
       
       if (bytes_read > 0) {
-        bytes_written = fwrite(buffer, 1, bytes_read, outMp4File);
+        bytes_written = (int) fwrite(buffer, 1, bytes_read, outMp4File);
         if (bytes_written != bytes_read) {
           NSAssert(bytes_written == bytes_read, @"bytes_written != bytes_read : %d != %d", bytes_written, bytes_read);
         }
@@ -314,7 +348,9 @@
     
   }
   
-  [self playMovie:tmpOutputPath];
+  dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 1 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+    [self playMovie:tmpOutputPath];
+  });
 }
 
 @end
