@@ -236,12 +236,18 @@
 
 }
 
+// FIXME: look into background transfer service
+// http://www.appcoda.com/background-transfer-service-ios7/
+
 // This method is invoked when a download state changes or at the start of a download
 // in order to activate 4 downloaders at any one time but no more than 4.
 
 - (void) activateDownloaders
 {
   int numDownloading = 0;
+  
+  // FIXME: NSURLSessionConfiguration.HTTPMaximumConnectionsPerHost check in iOS 7 ?
+  
   const int maxDownloaders = 4;
   
   for (AsyncURLDownloader *asyncURLDownloader in self.asyncDownloaders) {
