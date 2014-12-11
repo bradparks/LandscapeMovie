@@ -113,9 +113,9 @@
 
 - (void)startMovieDownload
 {
-  NSString *entryName   = @"Luna_480p.mp4";
+  //NSString *entryName   = @"Luna_480p.mp4";
   //NSString *entryName   = @"Luna_720p.mp4";
-  //NSString *entryName   = @"Luna_1080p.mp4";
+  NSString *entryName   = @"Luna_1080p.mp4";
   
   if ([self.class doesTmpFileExist:entryName]) {
     NSString *tmpDirPath = [NSTemporaryDirectory() stringByAppendingPathComponent:entryName];
@@ -126,10 +126,11 @@
     
     return;
   }
-  
-  const BOOL useDevDeploy = FALSE;
+
 
   NSString *servicePrefix;
+
+  const BOOL useDevDeploy = FALSE;
   
   if (useDevDeploy) {
     // Deployed locally via:
@@ -366,6 +367,11 @@
   for (NSString *inGZPathStr in chunkFilenameArr) {
     NSString *tmpInputPath = [NSTemporaryDirectory() stringByAppendingPathComponent:inGZPathStr];
     
+    if (TRUE) {
+      NSData *mappedData = [NSData dataWithContentsOfMappedFile:tmpInputPath];
+      NSLog(@"chunk %@ -> %d bytes", [tmpInputPath lastPathComponent], (int)mappedData.length);
+    }
+    
     inGZFile = gzopen ((char*)[tmpInputPath UTF8String], "r");
     NSAssert(inGZFile, @"cannot open input path for reading");
     
@@ -388,9 +394,9 @@
         if (gzeof(inGZFile)) {
           break;
         } else {
-          gzerror(inGZFile, & err);
-          if (err) {
-            NSAssert(inGZFile, @"cannot read full buffer via gzread");
+          char * msg = (char*) gzerror(inGZFile, &err);
+          if (err != 0) {
+            NSAssert(TRUE, @"cannot read full buffer via gzread: %d -> %s", err, msg);
           }
         }
       }
