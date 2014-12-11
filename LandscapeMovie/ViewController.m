@@ -120,6 +120,8 @@
   if ([self.class doesTmpFileExist:entryName]) {
     NSString *tmpDirPath = [NSTemporaryDirectory() stringByAppendingPathComponent:entryName];
     
+    NSLog(@"using cached video at %@", tmpDirPath);
+    
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 2 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
       [self playMovie:tmpDirPath];
     });
@@ -130,7 +132,7 @@
 
   NSString *servicePrefix;
 
-  const BOOL useDevDeploy = FALSE;
+  const BOOL useDevDeploy = TRUE;
   
   if (useDevDeploy) {
     // Deployed locally via:
@@ -141,6 +143,9 @@
     // goapp deploy -oauth
     servicePrefix = @"http://sinuous-vortex-786.appspot.com";
   }
+  
+  // Outgoing Bandwidth : 1.12 of 1 GB
+  // 503 Over Quota
   
   NSString *segmentsJsonURL   = [NSString stringWithFormat:@"%@/%@", servicePrefix, entryName];
   NSURL *url = [NSURL URLWithString:segmentsJsonURL];
@@ -202,6 +207,8 @@
       
       NSString *tmpPartPath = [NSString stringWithFormat:@"%@.part", [tmpDir stringByAppendingPathComponent:chunkFilename]];
       
+      asyncURLDownloader.timeoutInterval = 60 * 3; // longer than default timeout of 60 seconds
+      
       asyncURLDownloader.resultFilename = tmpPartPath;
       
       NSLog(@"start async download %@", url);
@@ -214,11 +221,10 @@
                                                selector:@selector(asyncURLDownloaderDidFinishNotification:)
                                                    name:AsyncURLDownloadDidFinish
                                                  object:asyncURLDownloader];
-      
-      [asyncURLDownloader startDownload];
-      
     }
   }
+
+  [self activateDownloaders];
   
   // FIXME: this would be better done as a check on each downloader to see if completed
   
@@ -228,6 +234,40 @@
     [self waitForAndJoinChunks:chunkFilenameArr entryName:entryName];
   });
 
+}
+
+// This method is invoked when a download state changes or at the start of a download
+// in order to activate 4 downloaders at any one time but no more than 4.
+
+- (void) activateDownloaders
+{
+  int numDownloading = 0;
+  const int maxDownloaders = 4;
+  
+  for (AsyncURLDownloader *asyncURLDownloader in self.asyncDownloaders) {
+    if (asyncURLDownloader.started && asyncURLDownloader.downloading) {
+      numDownloading++;
+    }
+  }
+  
+  NSLog(@"active downloaders %d", numDownloading);
+  
+  NSAssert(numDownloading <= maxDownloaders, @"maxDownloaders");
+
+  int activate = maxDownloaders - numDownloading;
+  
+  int activated = 0;
+  
+  for (AsyncURLDownloader *asyncURLDownloader in self.asyncDownloaders) {
+    if (activate > 0 && !asyncURLDownloader.started) {
+      activate--;
+      activated++;
+      
+      [asyncURLDownloader startDownload];
+    }
+  }
+  
+  NSLog(@"activated %d downloaders", activated);
 }
 
 // Invoked when ChunkN.gz file has been fully downloaded
@@ -276,6 +316,8 @@
   
   worked = [[NSFileManager defaultManager] moveItemAtPath:partFilename toPath:gzFilename error:nil];
   NSAssert(worked, @"rename from %@ to %@ failed", partFilename, gzFilename);
+
+  [self activateDownloaders];
 }
 
 + (BOOL) doesTmpFileExist:(NSString*)chunkFilename
