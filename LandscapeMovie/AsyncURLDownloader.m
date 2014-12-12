@@ -446,7 +446,7 @@ NSString * const AsyncURLDownloaderConnectionDelegateProgress = @"AsyncURLDownlo
 
 - (void) connection:(NSURLConnection*)connection didReceiveData:(NSData*)data
 {
-  NSLog(@"NSURLConnection delegate didReceiveData: %p (%d bytes)", data, (int)[data length]);
+  //NSLog(@"NSURLConnection delegate didReceiveData: %p (%d bytes)", data, (int)[data length]);
   
   long long downloadedNumBytes;
   

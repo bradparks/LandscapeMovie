@@ -197,14 +197,12 @@
   
   self.asyncDownloaders = [NSMutableArray array];
   
-  for (NSString *urlStr in chunkArr) {
-
-    NSString *chunkFilename = [urlStr lastPathComponent];
+  for (NSDictionary *chunkEntry in chunkArr) {
+    NSString *urlAndProtocolStr = [chunkEntry objectForKey:@"ChunkName"];
+    NSString *chunkFilename = [urlAndProtocolStr lastPathComponent];
     [chunkFilenameArr addObject:chunkFilename];
     
     if ([self.class doesTmpFileExist:chunkFilename] == FALSE) {
-
-      NSString *urlAndProtocolStr = [NSString stringWithFormat:@"http://%@", urlStr];
       NSURL *url = [NSURL URLWithString:urlAndProtocolStr];
       
       AsyncURLDownloader *asyncURLDownloader = [AsyncURLDownloader asyncURLDownloaderWithURL:url];
@@ -224,6 +222,11 @@
       NSLog(@"created async downloader for url %@", url);
       
       [self.asyncDownloaders addObject:asyncURLDownloader];
+
+      NSString *sizeNum = [chunkEntry objectForKey:@"CompressedLength"];
+      int size = [sizeNum intValue];
+      
+      [self updateDownloadedTableForDownloadFile:chunkFilename size:size];
       
       // Register for download progress notification
       
@@ -362,31 +365,62 @@
   AsyncURLDownloader *downloader = notification.object;
   
   // DOWNLOADEDNUMBYTES -> int number of bytes downloaded
-  // CONTENTNUMBYTES    -> int number of bytes to be downloaded via Content-Length HTTP header
+  // CONTENTNUMBYTES    -> int number of bytes to be downloaded via Content-Length HTTP header (cannot be relied on)
 
   NSNumber *downloadedNumBytesNum = [[notification userInfo] objectForKey:@"DOWNLOADEDNUMBYTES"];
-  NSNumber *contentNumBytesNum = [[notification userInfo] objectForKey:@"CONTENTNUMBYTES"];
+  //NSNumber *contentNumBytesNum = [[notification userInfo] objectForKey:@"CONTENTNUMBYTES"];
   
   NSAssert(downloadedNumBytesNum, @"DOWNLOADEDNUMBYTES");
-  NSAssert(contentNumBytesNum, @"CONTENTNUMBYTES");
+  //NSAssert(contentNumBytesNum, @"CONTENTNUMBYTES");
   
   NSString *filePath = downloader.resultFilename;
   
   NSString *fileTail = [filePath lastPathComponent];
   
+  // Foo.gz.part -> Foo.gz
+  
+  fileTail = [fileTail stringByReplacingOccurrencesOfString:@".gz.part" withString:@".gz"];
+  
+  NSMutableDictionary *mDict = self.asyncDownloaderProgress;
+  NSAssert(mDict, @"asyncDownloaderProgress");
+  
+  NSArray *currentValues = [mDict objectForKey:fileTail];
+  NSAssert(currentValues, @"values not initialized for key %@", fileTail);
+  
+  NSNumber *compressedNumBytesNum = currentValues[1];
+  
+  NSArray *newValues = @[downloadedNumBytesNum, compressedNumBytesNum];
+  
+  // Downloads num bytes can never be larger than the CompressedNumBytes
+  
+  NSAssert([downloadedNumBytesNum intValue] <= [compressedNumBytesNum intValue], @"downloadedNumBytesNum > compressedNumBytesNum : %d > %d", [downloadedNumBytesNum intValue], [compressedNumBytesNum intValue]);
+  
+  [mDict setObject:newValues forKey:fileTail];
+  
+  //NSLog(@"updated key %@ in progress table to %@", fileTail, newValues);
+  
+  [self updatePercentDone];
+}
+
+// Invoked for a chunk that will be downloaded. The size of the file to be downloaded
+// must be known ahead of time in order for the download % done logic to work properly.
+
+- (void) updateDownloadedTableForDownloadFile:(NSString*)chunkFilepath size:(int)size
+{
   if (self.asyncDownloaderProgress == nil) {
     self.asyncDownloaderProgress = [NSMutableDictionary dictionary];
   }
-  
+
   NSMutableDictionary *mDict = self.asyncDownloaderProgress;
+  NSAssert(mDict, @"asyncDownloaderProgress");
   
-  NSArray *arr = @[downloadedNumBytesNum, contentNumBytesNum];
+  NSNumber *sizeNum = [NSNumber numberWithInt:size];
+  
+  NSArray *arr = @[@(0), sizeNum];
+  
+  NSString *fileTail = [chunkFilepath lastPathComponent];
   
   [mDict setObject:arr forKey:fileTail];
-  
-  NSLog(@"updated key %@ in progress table to %@", fileTail, arr);
-  
-  [self updatePercentDone];
 }
 
 // Invoked in the case where a file was already completely downloaded and is sitting in the tmp
@@ -430,6 +464,8 @@
   int totalBytesDownloaded = 0;
   int totalBytesToDownload = 0;
   
+  NSAssert(self.asyncDownloaderProgress, @"asyncDownloaderProgress");
+  
   for (NSString *chunkFilename in [self.asyncDownloaderProgress allKeys]) {
     NSArray *arr = [self.asyncDownloaderProgress objectForKey:chunkFilename];
     NSAssert(arr, @"no asyncDownloaderProgress for file %@", chunkFilename);
@@ -453,10 +489,15 @@
     percentDoneInt = 1;
   }
   
-  if (self.percentDoneReported == percentDoneInt || self.percentDoneReported+1 == percentDoneInt) {
-    // Already update the display with this % done numeric value, or +1
+  if (self.percentDoneReported == percentDoneInt) {
+    // Already update the display with this % done numeric value
     return;
   }
+  
+//  if (percentDoneInt > 1 && percentDoneInt < 99 && self.percentDoneReported+1 == percentDoneInt) {
+//    // If not 1% or 99% or 100% then skip redrawing until at least 2% delta
+//    return;
+//  }
 
   self.percentDoneReported = percentDoneInt;
   
@@ -468,7 +509,7 @@
   
   NSString *percentDoneTitle = [NSString stringWithFormat:@"Loading ... %@%%", percentDoneStr];
   
-  dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 1 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+  dispatch_after(dispatch_time(DISPATCH_TIME_NOW, NSEC_PER_SEC / 4), dispatch_get_main_queue(), ^{
     [self.launchButton setTitle:percentDoneTitle forState:UIControlStateNormal];
   });
 }
@@ -572,12 +613,17 @@
   
   NSLog(@"wrote %@", tmpOutputPath);
   
-  if (0) {
+  if (TRUE) {
     // Remove chunks after writing final output
     
     for (NSString *inGZPathStr in chunkFilenameArr) {
       NSLog(@"rm %@", inGZPathStr);
-      unlink((char*)[inGZPathStr UTF8String]);
+      
+      NSError *error;
+      BOOL worked = [[NSFileManager defaultManager] removeItemAtPath:inGZPathStr error:&error];
+      if (!worked) {
+        NSLog(@"could not delete %@", inGZPathStr);
+      }
     }
     
   }
