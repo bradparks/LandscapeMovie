@@ -18,6 +18,8 @@
 
 @property (nonatomic, retain) MPMoviePlayerController *moviePlayerController;
 
+@property (nonatomic, retain) UIImageView *imageView;
+
 // Array of AsyncURLDownloader objects
 
 @property (nonatomic, retain) NSMutableArray *asyncDownloaders;
@@ -129,9 +131,9 @@
     [moviePlayerController.view removeFromSuperview];
   }
   
-  // Goofy movie logic could invoke this method multiple times
+  // Goofy movie logic could invoke this method multiple times, add image view once
   
-  if (self.view.subviews.count == 0) {
+  if (self.imageView == nil) {
     CGRect frame = self.view.frame;
     
     if (frame.size.height > frame.size.width) {
@@ -139,7 +141,13 @@
       frame = CGRectMake(0, 0, frame.size.height, frame.size.width);
     }
     
+    for (UIView *subview in self.view.subviews) {
+      [subview removeFromSuperview];
+    }
+    
     UIImageView *imageView = [[UIImageView alloc] initWithFrame:frame];
+    self.imageView = imageView;
+    
     UIImage *theEndImage = [UIImage imageNamed:@"TheEnd.jpg"];
     NSAssert(theEndImage, @"theEndImage");
     imageView.image = theEndImage;
