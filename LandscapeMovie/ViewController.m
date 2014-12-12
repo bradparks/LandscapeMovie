@@ -90,6 +90,11 @@
                                                name:MPMoviePlayerPlaybackDidFinishNotification
                                              object:moviePlayerController];
   
+  [[NSNotificationCenter defaultCenter] addObserver:self
+                                           selector:@selector(movieDidExitFullscreen:)
+                                               name:MPMoviePlayerDidExitFullscreenNotification
+                                             object:moviePlayerController];
+  
   CGRect frame = self.view.frame;
   
   NSLog(@"set movie width x height to %d x %d", (int)frame.size.width, (int)frame.size.height);
@@ -119,6 +124,24 @@
   [moviePlayerController.view removeFromSuperview];
   
   self.moviePlayerController = nil;
+  
+  CGRect frame = self.view.frame;
+  UIImageView *imageView = [[UIImageView alloc] initWithFrame:frame];
+  UIImage *theEndImage = [UIImage imageNamed:@"TheEnd.jpg"];
+  NSAssert(theEndImage, @"theEndImage");
+  imageView.image = theEndImage;
+  [self.view addSubview:imageView];
+}
+
+// User pressed "Done" button
+
+- (void)movieDidExitFullscreen:(NSNotification *)notification
+{
+  [[NSNotificationCenter defaultCenter] removeObserver:self
+                                                  name:MPMoviePlayerDidExitFullscreenNotification
+                                                object:self.moviePlayerController];
+  
+  [self moviePlaybackComplete:notification];
 }
 
 // Kick off movie download by checking the device screen size and choosing to download the right video
