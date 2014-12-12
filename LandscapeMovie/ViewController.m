@@ -115,24 +115,39 @@
 
 - (void)moviePlaybackComplete:(NSNotification *)notification
 {
-  MPMoviePlayerController *moviePlayerController = [notification object];
+  if (self.moviePlayerController != nil) {
+    MPMoviePlayerController *moviePlayerController = self.moviePlayerController;
+    
+    self.moviePlayerController = nil;
+    
+    [moviePlayerController stop];
+    
+    [[NSNotificationCenter defaultCenter] removeObserver:self
+                                                    name:MPMoviePlayerPlaybackDidFinishNotification
+                                                  object:moviePlayerController];
+    
+    [moviePlayerController.view removeFromSuperview];
+  }
   
-  [moviePlayerController stop];
+  // Goofy movie logic could invoke this method multiple times
   
-  [[NSNotificationCenter defaultCenter] removeObserver:self
-                                                  name:MPMoviePlayerPlaybackDidFinishNotification
-                                                object:moviePlayerController];
-  
-  [moviePlayerController.view removeFromSuperview];
-  
-  self.moviePlayerController = nil;
-  
-  CGRect frame = self.view.frame;
-  UIImageView *imageView = [[UIImageView alloc] initWithFrame:frame];
-  UIImage *theEndImage = [UIImage imageNamed:@"TheEnd.jpg"];
-  NSAssert(theEndImage, @"theEndImage");
-  imageView.image = theEndImage;
-  [self.view addSubview:imageView];
+  if (self.view.subviews.count == 0) {
+    CGRect frame = self.view.frame;
+    
+    if (frame.size.height > frame.size.width) {
+      // self.view is not in Landscape orientation
+      frame = CGRectMake(0, 0, frame.size.height, frame.size.width);
+    }
+    
+    UIImageView *imageView = [[UIImageView alloc] initWithFrame:frame];
+    UIImage *theEndImage = [UIImage imageNamed:@"TheEnd.jpg"];
+    NSAssert(theEndImage, @"theEndImage");
+    imageView.image = theEndImage;
+    imageView.contentMode = UIViewContentModeScaleToFill;
+    [self.view addSubview:imageView];
+    
+    NSLog(@"set imageView width x height to %d x %d", (int)imageView.frame.size.width, (int)imageView.frame.size.height);
+  }
 }
 
 // User pressed "Done" button
@@ -210,17 +225,21 @@
   // this first download will fail.
 
   if (jsonData == nil) {
-    NSString *msgStr = [NSString stringWithFormat:@"JSON download failed"];
+    NSString *msgStr = @"GAE JSON download failed";
     
     NSLog(@"%@", msgStr);
     
-    UIAlertView *message = [[UIAlertView alloc] initWithTitle:@"Network Error"
-                                                      message:msgStr
-                                                     delegate:nil
-                                            cancelButtonTitle:@"OK"
-                                            otherButtonTitles:nil];
-    
-    [message show];
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, NSEC_PER_SEC / 4), dispatch_get_main_queue(), ^{
+      UIAlertView *message = [[UIAlertView alloc] initWithTitle:@"Network Error"
+                                                        message:msgStr
+                                                       delegate:nil
+                                              cancelButtonTitle:@"OK"
+                                              otherButtonTitles:nil];
+      
+      [message show];
+      
+      [self moviePlaybackComplete:nil];
+    });
     
     return;
   }
@@ -377,17 +396,22 @@
     
 //    NSAssert(FALSE, @"non 200 HTTP STATUS code %d", httpStatusCode);
     
-    NSString *msgStr = [NSString stringWithFormat:@"HTTP status code %d : download canceled", httpStatusCode];
+    NSString *msgStr = [NSString stringWithFormat:@"HTTP chunk status code %d : download canceled", httpStatusCode];
     
     NSLog(@"%@", msgStr);
     
-    UIAlertView *message = [[UIAlertView alloc] initWithTitle:@"Network Error"
-                                                      message:msgStr
-                                                     delegate:nil
-                                            cancelButtonTitle:@"OK"
-                                            otherButtonTitles:nil];
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, NSEC_PER_SEC / 4), dispatch_get_main_queue(), ^{
+      UIAlertView *message = [[UIAlertView alloc] initWithTitle:@"Network Error"
+                                                        message:msgStr
+                                                       delegate:nil
+                                              cancelButtonTitle:@"OK"
+                                              otherButtonTitles:nil];
+      
+      [message show];
+      
+      [self moviePlaybackComplete:nil];
+    });
     
-    [message show];
   }
   return;
 }
