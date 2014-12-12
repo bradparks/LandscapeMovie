@@ -22,6 +22,16 @@
 
 @property (nonatomic, retain) NSMutableArray *asyncDownloaders;
 
+// Table of download progress on a per file basis
+
+@property (nonatomic, retain) NSMutableDictionary *asyncDownloaderProgress;
+
+// Int percent done value, this is useful so that a percent done calculation
+// need not update the GUI with the same value over and over as a result of
+// multiple downloads being processed.
+
+@property (nonatomic, assign) int percentDoneReported;
+
 @end
 
 @implementation ViewController
@@ -132,7 +142,7 @@
 
   NSString *servicePrefix;
 
-  const BOOL useDevDeploy = TRUE;
+  const BOOL useDevDeploy = FALSE;
   
   if (useDevDeploy) {
     // Deployed locally via:
@@ -211,9 +221,16 @@
       
       asyncURLDownloader.resultFilename = tmpPartPath;
       
-      NSLog(@"start async download %@", url);
+      NSLog(@"created async downloader for url %@", url);
       
       [self.asyncDownloaders addObject:asyncURLDownloader];
+      
+      // Register for download progress notification
+      
+      [[NSNotificationCenter defaultCenter] addObserver:self
+                                               selector:@selector(asyncURLDownloaderProgressNotification:)
+                                                   name:AsyncURLDownloadProgress
+                                                 object:asyncURLDownloader];
       
       // Register for notification when URL download is finished
       
@@ -221,6 +238,12 @@
                                                selector:@selector(asyncURLDownloaderDidFinishNotification:)
                                                    name:AsyncURLDownloadDidFinish
                                                  object:asyncURLDownloader];
+    } else {
+      // Chunk file already exists in tmp dir
+      
+      NSString *chunkFilepath = [NSTemporaryDirectory() stringByAppendingPathComponent:chunkFilename];
+      
+      [self updateDownloadedTableForCachedFile:chunkFilepath];
     }
   }
 
@@ -332,6 +355,124 @@
   return [[NSFileManager defaultManager] fileExistsAtPath:tmpDirPath];
 }
 
+// Invoked on download progress (AsyncURLDownloadProgress)
+
+- (void) asyncURLDownloaderProgressNotification:(NSNotification*)notification
+{
+  AsyncURLDownloader *downloader = notification.object;
+  
+  // DOWNLOADEDNUMBYTES -> int number of bytes downloaded
+  // CONTENTNUMBYTES    -> int number of bytes to be downloaded via Content-Length HTTP header
+
+  NSNumber *downloadedNumBytesNum = [[notification userInfo] objectForKey:@"DOWNLOADEDNUMBYTES"];
+  NSNumber *contentNumBytesNum = [[notification userInfo] objectForKey:@"CONTENTNUMBYTES"];
+  
+  NSAssert(downloadedNumBytesNum, @"DOWNLOADEDNUMBYTES");
+  NSAssert(contentNumBytesNum, @"CONTENTNUMBYTES");
+  
+  NSString *filePath = downloader.resultFilename;
+  
+  NSString *fileTail = [filePath lastPathComponent];
+  
+  if (self.asyncDownloaderProgress == nil) {
+    self.asyncDownloaderProgress = [NSMutableDictionary dictionary];
+  }
+  
+  NSMutableDictionary *mDict = self.asyncDownloaderProgress;
+  
+  NSArray *arr = @[downloadedNumBytesNum, contentNumBytesNum];
+  
+  [mDict setObject:arr forKey:fileTail];
+  
+  NSLog(@"updated key %@ in progress table to %@", fileTail, arr);
+  
+  [self updatePercentDone];
+}
+
+// Invoked in the case where a file was already completely downloaded and is sitting in the tmp
+// dir. Update the percent done table to account for the fully downloaded file.
+
+- (void) updateDownloadedTableForCachedFile:(NSString*)chunkFilepath
+{
+  if (self.asyncDownloaderProgress == nil) {
+    self.asyncDownloaderProgress = [NSMutableDictionary dictionary];
+  }
+  
+  NSMutableDictionary *mDict = self.asyncDownloaderProgress;
+  NSAssert(mDict, @"asyncDownloaderProgress");
+  
+  NSDictionary *attrs = [[NSFileManager defaultManager] attributesOfItemAtPath:chunkFilepath error:nil];
+  if (attrs == nil) {
+    // File does not exist or can't be accessed
+    NSAssert(FALSE, @"attributesOfItemAtPath failed for %@", chunkFilepath);
+  }
+  unsigned long long fileSize = [attrs fileSize];
+  size_t fileSizeT = (size_t) fileSize;
+  NSAssert(fileSize == fileSizeT, @"assignment from unsigned long long to size_t lost bits");
+  
+  NSNumber *intNum = [NSNumber numberWithInt:(int)fileSize];
+  
+  NSArray *arr = @[intNum, intNum];
+  
+  NSString *fileTail = [chunkFilepath lastPathComponent];
+  
+  [mDict setObject:arr forKey:fileTail];
+}
+
+- (void) updatePercentDone
+{
+  const BOOL debugPercentDone = FALSE;
+  
+  if (debugPercentDone) {
+    NSLog(@"updatePercentDone");
+  }
+  
+  int totalBytesDownloaded = 0;
+  int totalBytesToDownload = 0;
+  
+  for (NSString *chunkFilename in [self.asyncDownloaderProgress allKeys]) {
+    NSArray *arr = [self.asyncDownloaderProgress objectForKey:chunkFilename];
+    NSAssert(arr, @"no asyncDownloaderProgress for file %@", chunkFilename);
+    
+    NSNumber *downloadedNumBytesNum = arr[0];
+    NSNumber *contentNumBytesNum = arr[1];
+    
+    totalBytesDownloaded += [downloadedNumBytesNum intValue];
+    totalBytesToDownload += [contentNumBytesNum intValue];
+
+    if (debugPercentDone) {
+      NSLog(@"add progress num bytes %d of %d", [downloadedNumBytesNum intValue], [contentNumBytesNum intValue]);
+    }
+  }
+  
+  float percentDoneNormalized = ((float)totalBytesDownloaded) / totalBytesToDownload;
+  
+  int percentDoneInt = (int)round(percentDoneNormalized*100.0f);
+  
+  if (percentDoneInt == 0) {
+    percentDoneInt = 1;
+  }
+  
+  if (self.percentDoneReported == percentDoneInt || self.percentDoneReported+1 == percentDoneInt) {
+    // Already update the display with this % done numeric value, or +1
+    return;
+  }
+
+  self.percentDoneReported = percentDoneInt;
+  
+  NSString *percentDoneStr = [NSString stringWithFormat:@"%3d", percentDoneInt];
+  
+  if (debugPercentDone) {
+    NSLog(@"percentDoneStr %@", percentDoneStr);
+  }
+  
+  NSString *percentDoneTitle = [NSString stringWithFormat:@"Loading ... %@%%", percentDoneStr];
+  
+  dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 1 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+    [self.launchButton setTitle:percentDoneTitle forState:UIControlStateNormal];
+  });
+}
+
 - (void)waitForAndJoinChunks:(NSArray*)chunkFilenameArr entryName:(NSString*)entryName
 {
   const BOOL debugWait = FALSE;
@@ -347,36 +488,10 @@
   
   BOOL allFileExist = TRUE;
   
-  float percentDoneNormalized = 0.0f;
-  
   for (NSString *chunkFilename in chunkFilenameArr) {
     if ([self.class doesTmpFileExist:chunkFilename] == FALSE) {
       allFileExist = FALSE;
-    } else {
-      percentDoneNormalized += (100.0f / chunkFilenameArr.count) / 100.0f;
     }
-  }
-
-  int percentDoneInt = (int)round(percentDoneNormalized*100.0f);
-  
-  if (percentDoneInt == 0) {
-    percentDoneInt = 1;
-  }
-  
-  NSString *percentDoneStr = [NSString stringWithFormat:@"%3d", percentDoneInt];
-
-  if (debugWait || 1) {
-    NSLog(@"percentDoneStr %@", percentDoneStr);
-  }
-  
-  NSString *percentDoneTitle = [NSString stringWithFormat:@"Loading ... %@%%", percentDoneStr];
-  
-  dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 1 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
-    [self.launchButton setTitle:percentDoneTitle forState:UIControlStateNormal];
-  });
-  
-  if (debugWait || 1) {
-    NSLog(@"percentDoneTitle %@", percentDoneTitle);
   }
   
   if (allFileExist) {

@@ -423,6 +423,7 @@ NSString * const AsyncURLDownloaderConnectionDelegateProgress = @"AsyncURLDownlo
 
 - (BOOL) appendToFile:(NSString*)path
                  data:(NSData*)data
+     totalNumBytesPtr:(long long*)totalNumBytesPtr
 {
   NSFileHandle *fh = [NSFileHandle fileHandleForWritingAtPath:path];
   
@@ -431,6 +432,10 @@ NSString * const AsyncURLDownloaderConnectionDelegateProgress = @"AsyncURLDownlo
   {
     [fh seekToEndOfFile];
     [fh writeData:data];
+    if (totalNumBytesPtr != NULL) {
+      long long offset = [fh seekToEndOfFile];
+      *totalNumBytesPtr = offset;
+    }
     [fh closeFile];
     return YES;
   }
@@ -441,17 +446,20 @@ NSString * const AsyncURLDownloaderConnectionDelegateProgress = @"AsyncURLDownlo
 
 - (void) connection:(NSURLConnection*)connection didReceiveData:(NSData*)data
 {
-  //NSLog(@"NSURLConnection delegate didReceiveData: %x (%d bytes)", data, [data length]);
+  NSLog(@"NSURLConnection delegate didReceiveData: %p (%d bytes)", data, (int)[data length]);
+  
+  long long downloadedNumBytes;
   
   if (self.data == nil) {
     // Data is incrementally written to a file as it is downloaded.
     
     NSAssert(self.resultFilename, @"resultFilename can't be nil");
     
-    BOOL worked = [self appendToFile:self.resultFilename data:data];
+    BOOL worked = [self appendToFile:self.resultFilename data:data totalNumBytesPtr:&downloadedNumBytes];
     NSAssert(worked, @"worked");
   } else {
-    [self.data appendData:data];    
+    [self.data appendData:data];
+    downloadedNumBytes = self.data.length;
   }
   
   downloadedBytes += [data length];
@@ -465,12 +473,17 @@ NSString * const AsyncURLDownloaderConnectionDelegateProgress = @"AsyncURLDownlo
   }
   NSNumber *progressPercentNum = [NSNumber numberWithFloat:progressPercent];
   
+  NSNumber *totalNumBytesNum = [NSNumber numberWithInt:(int)downloadedNumBytes];
+  NSNumber *contentLengthNum = [NSNumber numberWithInt:self->contentLength];
+  
   NSDictionary *userInfo = [NSDictionary dictionaryWithObjectsAndKeys:
                             data, @"PROGRESSDATA",
                             progressPercentNum, @"PROGRESSPERCENT",
+                            totalNumBytesNum, @"DOWNLOADEDNUMBYTES",
+                            contentLengthNum, @"CONTENTNUMBYTES",
                             nil];
 
-  NSAssert([[userInfo allKeys] count] == 2, @"wrong key count");
+  NSAssert([[userInfo allKeys] count] == 4, @"wrong key count");
   
   [[NSNotificationCenter defaultCenter] postNotificationName:AsyncURLDownloaderConnectionDelegateProgress object:self userInfo:userInfo];
 }
