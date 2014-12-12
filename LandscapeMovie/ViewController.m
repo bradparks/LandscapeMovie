@@ -121,18 +121,28 @@
   self.moviePlayerController = nil;
 }
 
+// Kick off movie download by checking the device screen size and choosing to download the right video
+
 - (void)startMovieDownload
 {
-  //NSString *entryName   = @"Luna_480p.mp4";
-  //NSString *entryName   = @"Luna_720p.mp4";
-  NSString *entryName   = @"Luna_1080p.mp4";
+  NSString *entryName;
+  
+  if ([self isIpad]) {
+    if ([self isRetinaDisplay]) {
+      entryName   = @"Luna_1080p.mp4";
+    } else {
+      entryName   = @"Luna_720p.mp4";
+    }
+  } else {
+    entryName   = @"Luna_480p.mp4";
+  }
   
   if ([self.class doesTmpFileExist:entryName]) {
     NSString *tmpDirPath = [NSTemporaryDirectory() stringByAppendingPathComponent:entryName];
     
     NSLog(@"using cached video at %@", tmpDirPath);
     
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 2 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, NSEC_PER_SEC / 4), dispatch_get_main_queue(), ^{
       [self playMovie:tmpDirPath];
     });
     
@@ -631,6 +641,32 @@
   dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 1 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
     [self playMovie:tmpOutputPath];
   });
+}
+
+// Return TRUE on iPad device, if FALSE then iPhone device.
+
+- (BOOL) isIpad
+{
+  if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) {
+    return TRUE;
+  } else {
+    return FALSE;
+  }
+}
+
+// Return TRUE for a 2x or 3x scale display on iPhone or iPad devices.
+// This function returns FALSE on original iPhone 3 or iPad 1 or 2 devices.
+
+- (BOOL) isRetinaDisplay
+{
+  if ([[UIScreen mainScreen] respondsToSelector:@selector(displayLinkWithTarget:selector:)] &&
+      ([UIScreen mainScreen].scale == 2.0)) {
+    // Retina display
+    return TRUE;
+  } else {
+    // non-Retina display
+    return FALSE;
+  }
 }
 
 @end
