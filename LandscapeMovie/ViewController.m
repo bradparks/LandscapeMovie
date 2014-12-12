@@ -713,10 +713,12 @@
     for (NSString *inGZPathStr in chunkFilenameArr) {
       NSLog(@"rm %@", inGZPathStr);
       
+      NSString *tmpInputPath = [NSTemporaryDirectory() stringByAppendingPathComponent:inGZPathStr];
+      
       NSError *error;
-      BOOL worked = [[NSFileManager defaultManager] removeItemAtPath:inGZPathStr error:&error];
+      BOOL worked = [[NSFileManager defaultManager] removeItemAtPath:tmpInputPath error:&error];
       if (!worked) {
-        NSLog(@"could not delete %@", inGZPathStr);
+        NSLog(@"could not delete %@ : %@", tmpInputPath, error);
       }
     }
     
