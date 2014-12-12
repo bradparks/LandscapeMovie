@@ -117,6 +117,8 @@
 {
   MPMoviePlayerController *moviePlayerController = [notification object];
   
+  [moviePlayerController stop];
+  
   [[NSNotificationCenter defaultCenter] removeObserver:self
                                                   name:MPMoviePlayerPlaybackDidFinishNotification
                                                 object:moviePlayerController];
@@ -203,10 +205,23 @@
 
 - (void)finishedChunksDownload:(NSData*)jsonData entryName:(NSString*)entryName
 {
-  // Parse Json and then download each segment listed in the download
+  // Parse Json and then download each segment listed in the download,
+  // if GAE is down (or you have hit the free download quota) then
+  // this first download will fail.
 
   if (jsonData == nil) {
-    NSLog(@"JSON url download failed");
+    NSString *msgStr = [NSString stringWithFormat:@"JSON download failed"];
+    
+    NSLog(@"%@", msgStr);
+    
+    UIAlertView *message = [[UIAlertView alloc] initWithTitle:@"Network Error"
+                                                      message:msgStr
+                                                     delegate:nil
+                                            cancelButtonTitle:@"OK"
+                                            otherButtonTitles:nil];
+    
+    [message show];
+    
     return;
   }
   
@@ -358,7 +373,21 @@
     
     [self finishedChunkDownload:gzFilename partFilepath:partFilename];
   } else {
-    NSAssert(FALSE, @"non 200 HTTP STATUS code %d", httpStatusCode);
+    // FIXME: Show dialog with HTTP error status code and possible reason
+    
+//    NSAssert(FALSE, @"non 200 HTTP STATUS code %d", httpStatusCode);
+    
+    NSString *msgStr = [NSString stringWithFormat:@"HTTP status code %d : download canceled", httpStatusCode];
+    
+    NSLog(@"%@", msgStr);
+    
+    UIAlertView *message = [[UIAlertView alloc] initWithTitle:@"Network Error"
+                                                      message:msgStr
+                                                     delegate:nil
+                                            cancelButtonTitle:@"OK"
+                                            otherButtonTitles:nil];
+    
+    [message show];
   }
   return;
 }
